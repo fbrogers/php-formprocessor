@@ -192,8 +192,12 @@ class FormProcessor{
 	//adds an attachment
 	public function attach($file, $required = true, $types = 'doc|docx|gif|jpg|pdf|png|rtf|txt|xls|xlsx', $size = null){
 		//file upload check
-		if($_FILES[$file]['error'] == UPLOAD_ERR_NO_FILE and $required){
-			throw new Exception("File upload required.", 1);			
+		if($_FILES[$file]['error'] > 0){
+			if($required){
+				throw new Exception("File upload required.", 1);
+			}else{
+				return true;
+			}
 		}
 
 		//set the max file size to the PHP upload limit, if no size is provided
@@ -202,18 +206,18 @@ class FormProcessor{
 		}
 
 		//check for any file upload errors
-		if($_FILES[$file]["error"] > 0){
-			die("Error: " . $file["error"]);
+		if($_FILES[$file]['error'] > 0){
+			throw new Exception("Error: " . $file["error"]);
 		}
 
 		//file types check
 		if(!preg_match('/^.*\.('.$types.')$/i', $_FILES[$file]["name"])){
-			die("Error: Uploaded file type is not allowed.");
+			throw new Exception("Error: Uploaded file type is not allowed.");
 		}
 
 		//file size check
 		if(($_FILES[$file]["size"]) > ($size * 1024 * 1024)){
-			die("File too large. It exceeds the file size limit of {$size}M.");
+			throw new Exception("File too large. It exceeds the file size limit of {$size}M.");
 		}
 
 		//attachment piece hash
