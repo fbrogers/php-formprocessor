@@ -1,30 +1,26 @@
- ______                   _____                                        
-|  ____|                 |  __ \                                       
-| |__ ___  _ __ _ __ ___ | |__) | __ ___   ___ ___  ___ ___  ___  _ __ 
-|  __/ _ \| '__| '_ ` _ \|  ___/ '__/ _ \ / __/ _ \/ __/ __|/ _ \| '__|
-| | | (_) | |  | | | | | | |   | | | (_) | (_|  __/\__ \__ \ (_) | |   
-|_|  \___/|_|  |_| |_| |_|_|   |_|  \___/ \___\___||___/___/\___/|_|   
+#FormProcessor
 
-Class:			FormProcessor
-Author: 		Jordan Rogers <jr@ucf.edu>
-Creation Date:	May 2010
-Last Change:	May 2012
-Description:
+- Class: FormProcessor
+- Author: Jordan Rogers <jr@ucf.edu>
+- Creation Date: May 2010
+- Last Change: May 2012
+
+##Description
 
 A class that aides in the emailing of HTML form post data.
-=================
 
+##Changelog
 
-
-changelog
-=================
 2012-08-14 Jordan Rogers <jr@ucf.edu>
+
 	* fixed the ::shout method to work with PHP 5.4
 
 2012-07-27 Jordan Rogers <jr@ucf.edu>
+
 	* added return to the array check for consistency
 
 2012-07-26 Jordan Rogers <jr@ucf.edu>
+
 	* changed oxyClean to return a NULL if value is empty or pseudo-equal to NULL
 
 2012-06-04 Jordan Rogers <jr@ucf.edu>
