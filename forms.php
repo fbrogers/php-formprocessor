@@ -1,21 +1,44 @@
 <?php
 
 class FormProcessor{
-	//------------- PRESET VARIABLES ------//
-	public $to = array(), $cc = array(), $bcc = array(), $subject, $from, $breaks = array(), $html = true, $conn;
-	private $hash, $attachments = array(), $data, $styles, $body, $body_append, $body_top;
+
+	//user-definable properties
+	public $to = array();
+	public $cc = array();
+	public $bcc = array();
+	public $subject;
+	public $from;
+	public $breaks = array();
+	public $html = true;
+	public $conn;
+
+	//internal, private properties
+	private $hash;
+	private $attachments = array();
+	private $data;
+	private $styles;
+	private $body;
+	private $body_append;
+	private $body_top;
+
+	//constant settings
 	const CHAR_LIMIT = 3000;
 
-	//------------- CLASS CONSTRUCTOR / RUNS ON INSTANTIATION ------//
+	//constructor
 	public function __construct(){
 
-		//if submit button is not named 'form_submit', the class will fail
+		//if the submit button is set, remove it
 		if(isset($_POST['form_submit'])){
 			unset($_POST['form_submit']);
 		}
 
 		//assign $_POST array to data
 		$this->data = $_POST;
+
+		//check for blank array
+		if(empty($this->data)){
+			throw new Exception("Cannot submit a blank form.", 1);			
+		}
 
 		//style for HTML e-mails
 		$this->styles =
@@ -51,32 +74,20 @@ class FormProcessor{
 			}
 		</style>';
 
-		//safety checks
-		try{
-			//check for email headers in values
-			$this->checkHeader($_POST);
+		//check for email headers in values
+		$this->checkHeader($this->data);
 
-			//check for referral headers
-			$this->httpHeaders();
+		//check for referral headers
+		$this->httpHeaders();
 
-			//remove all null elements
-			$this->data = $this->postClean($this->data);
-
-			//verify that the form contains data
-			$this->blankCheck($this->data);
-		}
-		catch (Exception $e) {
-			die('Exception: '.$e->getMessage());
-		}
-
-		//remove leading whitespace and HTML from values
-		$this->removeWhite($_POST);
-
+		//remove all null elements
+		$this->data = $this->postClean($this->data);
+		
 		//truncates all submitted values to CHAR_LIMIT
-		$this->shout($_POST);
+		$this->shout($this->data);
 	}
 
-	//------------- CONSTRUCTS AND SENDS THE EMAIL ------//
+	//constructs and sends an email
 	public function send(){
 		//assign SDES IT Development Team email to BCC
 		$this->bcc[] = 'sdesitdev@ucf.edu';
@@ -97,8 +108,12 @@ class FormProcessor{
 		$headers .= "X-Mailer: UCF / SDES IT FormProcessor Class"."\r\n"; // These two to help avoid spam-filters
 		$headers .= "Date: ".date("r")."\r\n";
 
-		//begin message body, html or otherwise
-		$message = $this->html ? $this->styles.$this->array2html($this->data) : $this->array2text($this->data);
+		//begin message body
+		$message = $this->html
+			? $this->styles.$this->array2html($this->data)
+			: $this->array2text($this->data);
+
+		//set the mail type to html or plain
 		$mailtype = $this->html ? 'html' : 'plain';
 
 		//attachment check and construction
@@ -141,12 +156,12 @@ class FormProcessor{
 			$message = $temp_messaage;
 		}
 
-		//add CC header
+		//add cc header
 		if($this->cc != NULL){
 			$headers .= "Cc: {$this->cc}\r\n";
 		}
 
-		//add BCC header
+		//add bcc header
 		if($this->bcc != NULL){
 			$headers .= "Bcc: {$this->bcc}\r\n";
 		}
@@ -174,45 +189,43 @@ class FormProcessor{
 		mail($this->to, $this->subject, $message, $headers);
 	}
 
-	//------------- ATTACHES A FILE TO THE EMAIL ------//
+	//adds an attachment
 	public function attach($file, $required = true, $types = 'doc|docx|gif|jpg|pdf|png|rtf|txt|xls|xlsx', $size = null){
 		//file upload check
-		if($_FILES[$file]['error'] != UPLOAD_ERR_NO_FILE){
-
-			//set the max file size to the PHP upload limit, if no size is provided
-			if(is_null($size)){
-				$size = str_replace('M', '', ini_get("upload_max_filesize"));
-			}
-
-			//check for any file upload errors
-			if($_FILES[$file]["error"] > 0){
-				die("Error: " . $file["error"]);
-			}
-
-			//file types check
-			if(!preg_match('/^.*\.('.$types.')$/i', $_FILES[$file]["name"])){
-				die("Error: Uploaded file type is not allowed.");
-			}
-
-			//file size check
-			if(($_FILES[$file]["size"]) > ($size * 1024 * 1024)){
-				die("File too large. It exceeds the file size limit of {$size}M.");
-			}
-
-			//attachment piece hash
-			$hash = md5(date('r', time()).$_FILES[$file]["name"]);
-
-			//move file stream
-			$this->attachments[$hash]['blob'] = file_get_contents($_FILES[$file]['tmp_name']);
-			$this->attachments[$hash]['filename'] = strtolower($_FILES[$file]['name']);
-			$this->attachments[$hash]['filetype'] = $_FILES[$file]["type"];
-
-		} else if($required){
-			die("File upload required.");
+		if($_FILES[$file]['error'] == UPLOAD_ERR_NO_FILE and $required){
+			throw new Exception("File upload required.", 1);			
 		}
+
+		//set the max file size to the PHP upload limit, if no size is provided
+		if(is_null($size)){
+			$size = str_replace('M', '', ini_get("upload_max_filesize"));
+		}
+
+		//check for any file upload errors
+		if($_FILES[$file]["error"] > 0){
+			die("Error: " . $file["error"]);
+		}
+
+		//file types check
+		if(!preg_match('/^.*\.('.$types.')$/i', $_FILES[$file]["name"])){
+			die("Error: Uploaded file type is not allowed.");
+		}
+
+		//file size check
+		if(($_FILES[$file]["size"]) > ($size * 1024 * 1024)){
+			die("File too large. It exceeds the file size limit of {$size}M.");
+		}
+
+		//attachment piece hash
+		$hash = md5(date('r', time()).$_FILES[$file]["name"]);
+
+		//move file stream
+		$this->attachments[$hash]['blob'] = file_get_contents($_FILES[$file]['tmp_name']);
+		$this->attachments[$hash]['filename'] = strtolower($_FILES[$file]['name']);
+		$this->attachments[$hash]['filetype'] = $_FILES[$file]["type"];
 	}
 
-	//------------- ATTACHES A BLOB/IMAGE/FILESTREAM TO THE EMAIL ------//
+	//attach a file stream
 	public function blob($filename, $filetype, $blob){
 		//attachment piece hash
 		$hash = md5(date('r', time()).$filename);
@@ -223,9 +236,8 @@ class FormProcessor{
 		$this->attachments[$hash]['filetype'] = $filetype;
 	}
 
-	//------------- ADDS SUBMISSION DATE TO THE EMAIL BODY ------//
+	//add submission date to the body of the email
 	public function submitDate($position = 'top'){
-
 		//create a datestamp array
 		$date = array('date_submitted' => date(DateTime::COOKIE));
 
@@ -233,7 +245,7 @@ class FormProcessor{
 		$this->data = ($position == 'top') ? $date+$this->data : $this->data+$data;
 	}
 
-	//------------- SET A CUSTOM EMAIL BODY --------------------//
+	//set a custom email body
 	public function body($body, $append = true, $top = true){
 
 		//set the message 
@@ -246,7 +258,7 @@ class FormProcessor{
 		$this->body_top = $top;
 	}
 
-	//------------- CONVERTS ARRAY ELEMENTS TO A USABLE TEXT STRING ------//
+	//converts array elements into a usable text string
 	private function array2text($array, $output = "", $prefix = ""){
 		foreach($array as $i => $x){
 			if(is_string($i) && in_array($i, $this->breaks) || is_array($x))
@@ -264,7 +276,7 @@ class FormProcessor{
 		return $output;
 	}
 
-	//------------- CONVERTS ARRAY ELEMENTS TO USABLE HTML ------//
+	//converts array elements into usable HTML
 	private function array2html($array){
 
 		//start the output table HTML
@@ -297,10 +309,11 @@ class FormProcessor{
 		//start the output table HTML
 		$output .= '</table>'."\n";
 
+		//return the html string
 		return $output;
 	}
 
-	//------------- REMOVES ALL BLANK FIELDS ------//
+	//removes all blank fields
 	public static function postClean($array){
 
 		//loop through given array
@@ -320,17 +333,12 @@ class FormProcessor{
 				unset($array[$index]);
 			}
 		}
+
+		//return the array
 		return $array;
 	}
 
-	//------------- CHECKS FOR A BLANK DATA ARRAY ------//
-	private function blankCheck($array){
-
-		//completely blank given array
-		if(empty($array)) throw new Exception("Cannot submit a blank form.");
-	}
-
-	//------------- CHECK ALL FIELDS FOR AN EMAIL HEADER ------//
+	//checks all elements of a given array for an email header
 	private function checkHeader($array){
 
 		//loop through array
@@ -341,36 +349,23 @@ class FormProcessor{
 				if(preg_match("/(%0A|%0D|\n+|\r+)(content-type:|to:|cc:|bcc:)/i",$x)){
 					throw new Exception("Email headers are not allowed, sorry!");
 				}
+
 			//recursion for arrays
 			} else {
-				if($this->checkHeader($x)){
-					return true;
-				}
+				return $this->checkHeader($x);
 			}
 		}
 		return false;
 	}
 
-	//------------- REMOVES ALL LEADING WHITESPACE AND BLANK INPUTS ------//
-	private function removeWhite(&$white){
-		if(!is_array($white)){
-			$white = ltrim(strip_tags($white));
-		} else {
-			foreach($white as $key => $value){
-				$white[$key] = $this->removeWhite($value);
-			}
-		}
-		return $white;
-	}
-
-	//------------- PREVENTS NON-REFERRER CLIENT ACCESS ------//
+	//checks for valid http referer
 	private function httpHeaders(){
 		if(!(isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER']) && stristr($_SERVER['HTTP_REFERER'],$_SERVER['HTTP_HOST']))){
 			throw new Exception("Referer logging must be enabled to use this form, sorry!");
 		}
 	}
 
-	//------------- LIMITS ALL INPUTS TO CHAR_LIMIT CHARACTERS ------//
+	//limits all inputs to the CHAR_LIMIT
 	private function shout(&$laundry){
 
 		//foreach element in the given array
@@ -392,7 +387,7 @@ class FormProcessor{
 		}
 	}
 
-	//------------- INSERTS THE DATA INTO SQL ------//
+	//inserts the data to SQL
 	public function SQLInsert(){
 		//prepares data for SQL insert
 		FormProcessor::oxyClean($this->fields);
@@ -405,7 +400,7 @@ class FormProcessor{
 		$return = sqlsrv_query($this->conn, $query) or die(print_r( sqlsrv_errors(), true));
 	}
 
-	//------------- SANITIZES DATA FOR INSERT INTO SQL ------//
+	//cleans an array of html, non-displayables, and white space
 	public static function oxyClean(&$laundry){
 
 		//regex encoded HTML filters array
@@ -423,7 +418,7 @@ class FormProcessor{
 
 		} else {
 			//ignore blank values
-			if(!isset($laundry) || ($laundry == NULL)){
+			if(!isset($laundry) or ($laundry == NULL)){
 				return NULL;
 			}
 
@@ -438,16 +433,17 @@ class FormProcessor{
 			}
 
 			//strip HTML and trim whitespace from values
-			$laundry = trim(strip_tags($laundry));
+			$laundry = trim(strip_tags($laundry, '<em><strong><ul><ol><li>'));
 
 			//return
 			return $laundry;
 		}
 	}
 
-	//TODO: This can only go one level deep
-	//------------- TRANSFORMS ALL POST ARRAYS INTO A SINGLE STRING ------//
+	//transforms arrays into strings
 	private function implodeArrays(&$dirty){
+		
+		//TODO: This can only go one level deep
 		foreach($dirty as $index => $x){
 			if(is_array($x)){
 				$dirty[$index] = implode(', ',$x);
