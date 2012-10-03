@@ -11,6 +11,13 @@ A class that aides in the emailing of HTML form post data.
 
 ##Changelog
 
+2012-10-02 Jordan Rogers <jr@ucf.edu>
+
+	* removed some unnecessary methods (blankCheck, others)
+	* removed the internal try/catch block
+	* converted all die() statements to new Exceptions
+	* converted description and changelog to readme
+
 2012-08-14 Jordan Rogers <jr@ucf.edu>
 
 	* fixed the ::shout method to work with PHP 5.4

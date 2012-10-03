@@ -364,7 +364,7 @@ class FormProcessor{
 
 	//checks for valid http referer
 	private function httpHeaders(){
-		if(!(isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER']) && stristr($_SERVER['HTTP_REFERER'],$_SERVER['HTTP_HOST']))){
+		if(!(isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER']) && stristr($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST']))){
 			throw new Exception("Referer logging must be enabled to use this form, sorry!");
 		}
 	}
