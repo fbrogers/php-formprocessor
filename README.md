@@ -18,6 +18,7 @@ A class that aides in the emailing of HTML form post data.
 	* removed non-disposables check from oxyClean, optimized return structure
 	* removed ::shout, incorporated functionality into oxyClean
 	* added oxyClean to the constructor - html now stripped by default
+	* removed ::implodeArrays because uh, I have no idea where it came from
 	* general cleanup
 
 2012-10-02 Jordan Rogers <jr@ucf.edu>
