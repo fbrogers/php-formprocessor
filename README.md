@@ -3,7 +3,6 @@
 - Class: FormProcessor
 - Author: Jordan Rogers <jr@ucf.edu>
 - Creation Date: May 2010
-- Last Change: May 2012
 
 ##Description
 

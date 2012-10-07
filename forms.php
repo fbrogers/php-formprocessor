@@ -209,6 +209,8 @@ class FormProcessor{
 		}
 	}
 
+	//TODO: Disable/Enable DevMode
+
 	//adds an attachment
 	public function attach($file, $required = true, $types = 'doc|docx|gif|jpg|pdf|png|rtf|txt|xls|xlsx', $size = null){
 
