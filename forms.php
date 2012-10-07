@@ -3,19 +3,19 @@
 class FormProcessor{
 
 	//user-definable properties
+	public $from;
 	public $to = array();
 	public $cc = array();
 	public $bcc = array();
 	public $subject;
-	public $from;
 	public $breaks = array();
-	public $html = true;
+	public $html;
 	public $conn;
 
 	//internal, private properties
+	private $data;
 	private $hash;
 	private $attachments = array();
-	private $data;
 	private $styles;
 	private $body;
 	private $body_append;
@@ -23,6 +23,7 @@ class FormProcessor{
 
 	//constant settings
 	const CHAR_LIMIT = 3000;
+	const DEV_EMAIL = 'sdesitdev@ucf.edu';
 
 	//constructor
 	public function __construct(){
@@ -32,8 +33,11 @@ class FormProcessor{
 			unset($_POST['form_submit']);
 		}
 
-		//assign $_POST array to data
+		//assign default values
 		$this->data = $_POST;
+		$this->from = 'sdesitdev@ucf.edu';
+		$this->subject = 'Form Submission';
+		$this->html = true;
 
 		//check for blank array
 		if(empty($this->data)){
@@ -83,20 +87,28 @@ class FormProcessor{
 		//remove all null elements
 		$this->data = $this->postClean($this->data);
 		
-		//truncates all submitted values to CHAR_LIMIT
-		$this->shout($this->data);
+		//strip html, trim values, and truncate to CHAR_LIMIT
+		$this->oxyClean($this->data);
 	}
 
 	//constructs and sends an email
-	public function send(){
-		//assign SDES IT Development Team email to BCC
-		$this->bcc[] = 'sdesitdev@ucf.edu';
+	public function send($redirect = false){
 
-		//TO, CC, and BCC: field
-		#TODO: Fix the array-to-string conversion notice
-		$this->to = @implode(',',$this->to);
-		$this->cc = @implode(',',$this->cc);
-		$this->bcc = @implode(',',$this->bcc);
+		//assign development team email to bcc
+		$this->bcc[] = DEV_EMAIL;
+
+		//check for required fields
+		if(empty($this->to)){
+			throw new Exception('"To:" email recipient not set.', 1);
+		}
+		if($this->from == NULL){
+			throw new Exception('"From:" email recipient not set.', 1);			
+		}
+
+		//converting all email headers to strings
+		$to = implode(',', $this->to);
+		$cc = implode(',', $this->cc);
+		$bcc = implode(',', $this->bcc);
 
 		//add generic headers
 		$headers = NULL;
@@ -118,7 +130,10 @@ class FormProcessor{
 
 		//attachment check and construction
 		if(empty($this->attachments)){
+
+			//set the mail type
 			$headers .= "Content-type: text/{$mailtype}; charset=UTF-8\r\n";
+
 		} else {
 			//generate semi-random number
 			$hash = md5(time());
@@ -157,13 +172,13 @@ class FormProcessor{
 		}
 
 		//add cc header
-		if($this->cc != NULL){
-			$headers .= "Cc: {$this->cc}\r\n";
+		if($cc != NULL){
+			$headers .= "Cc: {$cc}\r\n";
 		}
 
 		//add bcc header
-		if($this->bcc != NULL){
-			$headers .= "Bcc: {$this->bcc}\r\n";
+		if($bcc != NULL){
+			$headers .= "Bcc: {$bcc}\r\n";
 		}
 
 		//set the message according to the body
@@ -186,11 +201,17 @@ class FormProcessor{
 		}
 
 		//mail send
-		mail($this->to, $this->subject, $message, $headers);
+		mail($to, $this->subject, $message, $headers);
+
+		//redirect to the indicated page if set
+		if($redirect){
+			header("Location: {$redirect}");
+		}
 	}
 
 	//adds an attachment
 	public function attach($file, $required = true, $types = 'doc|docx|gif|jpg|pdf|png|rtf|txt|xls|xlsx', $size = null){
+
 		//file upload check
 		if($_FILES[$file]['error'] > 0){
 			if($required){
@@ -231,6 +252,7 @@ class FormProcessor{
 
 	//attach a file stream
 	public function blob($filename, $filetype, $blob){
+
 		//attachment piece hash
 		$hash = md5(date('r', time()).$filename);
 
@@ -242,6 +264,7 @@ class FormProcessor{
 
 	//add submission date to the body of the email
 	public function submitDate($position = 'top'){
+
 		//create a datestamp array
 		$date = array('date_submitted' => date(DateTime::COOKIE));
 
@@ -263,7 +286,7 @@ class FormProcessor{
 	}
 
 	//converts array elements into a usable text string
-	private function array2text($array, $output = "", $prefix = ""){
+	private function array2text($array, $output = NULL, $prefix = NULL){
 		foreach($array as $i => $x){
 			if(is_string($i) && in_array($i, $this->breaks) || is_array($x))
 				$output .= "\n";
@@ -317,36 +340,11 @@ class FormProcessor{
 		return $output;
 	}
 
-	//removes all blank fields
-	public static function postClean($array){
-
-		//loop through given array
-		foreach($array as $index => $x){
-
-			//check for nested arrays
-			if(is_array($x)){
-
-				//recursive call
-				$array[$index] = FormProcessor::postClean($x);
-				if(empty($array[$index])) unset($array[$index]);
-
-			//check for null values
-			}elseif(trim($x) == NULL) {
-
-				//remove the elemet from the array
-				unset($array[$index]);
-			}
-		}
-
-		//return the array
-		return $array;
-	}
-
 	//checks all elements of a given array for an email header
 	private function checkHeader($array){
 
 		//loop through array
-		foreach ($array as $x){
+		foreach($array as $x){
 
 			//check field for an email header
 			if(!is_array($x)){
@@ -362,65 +360,62 @@ class FormProcessor{
 		return false;
 	}
 
-	//checks for valid http referer
+	//checks for valid http referer from the same tld
 	private function httpHeaders(){
-		if(!(isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER']) && stristr($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST']))){
-			throw new Exception("Referer logging must be enabled to use this form, sorry!");
+
+		//checks to verify that the referer exists
+		if(!(isset($_SERVER['HTTP_REFERER']) && !empty($_SERVER['HTTP_REFERER']))){
+			throw new Exception("Referer logging must be enabled to use this form.");
+		}
+
+		//checks to verify that the referer set matches the current tld
+		if(!stristr($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST'])){
+			throw new Exception("Referer does not match the current site.", 1);			
 		}
 	}
 
-	//limits all inputs to the CHAR_LIMIT
-	private function shout(&$laundry){
+	//removes all blank fields
+	public static function postClean($array){
 
-		//foreach element in the given array
-		foreach($laundry as $spot => $dirt){
+		//loop through given array
+		foreach($array as $index => $x){
 
-			//if it is an array, loop recursively
-			if(is_array($dirt)){
+			//check for nested arrays
+			if(is_array($x)){
 
-				//run shout on all elements of the array
-				return $laundry[$spot] = $this->shout($dirt);
-			}
+				//recursive call
+				$array[$index] = FormProcessor::postClean($x);
 
-			//otherwise
-			else{
+				//if returned empty, remove it
+				if(empty($array[$index])){
+					unset($array[$index]);
+				}
 
-				//slice off only the first CHAR_LIMIT characters of the field
-				return $laundry[$spot] = substr($dirt, 0, FormProcessor::CHAR_LIMIT);
+			//check for null values
+			}elseif(trim($x) == NULL) {
+
+				//remove the elemet from the array
+				unset($array[$index]);
 			}
 		}
+
+		//return the array
+		return $array;
 	}
-
-	//inserts the data to SQL
-	public function SQLInsert(){
-		//prepares data for SQL insert
-		FormProcessor::oxyClean($this->fields);
-
-		//smashes all nested arrays into strings
-		$this->implodeArrays($this->fields);
-
-		//query
-		$query = "INSERT INTO [{$this->table}] ([".implode('], [',array_keys($this->fields))."]) VALUES ('".implode("', '",$this->fields)."')";
-		$return = sqlsrv_query($this->conn, $query) or die(print_r( sqlsrv_errors(), true));
-	}
-
+	
 	//cleans an array of html, non-displayables, and white space
 	public static function oxyClean(&$laundry){
 
-		//regex encoded HTML filters array
-		$non_displayables = array('/%0[0-8bcef]/','/%1[0-9a-f]/','/[\x00-\x08]/','/\x0b/','/\x0c/','/[\x0e-\x1f]/');
-
 		//type check
 		if(is_array($laundry)){
+
 			//recursion
 			foreach($laundry as $spot => $dirt){
 				$laundry[$spot] = FormProcessor::oxyClean($dirt);
 			}
 
-			//return
-			return $laundry;
-
 		} else {
+
 			//ignore blank values
 			if(!isset($laundry) or ($laundry == NULL)){
 				return NULL;
@@ -431,28 +426,15 @@ class FormProcessor{
 				return $laundry;
 			}
 
-			//replace all filtered elements with null
-			foreach($non_displayables as $regex){
-				$laundry = preg_replace($regex, '', $laundry);
-			}
-
-			//strip HTML and trim whitespace from values
+			//strip non-allowed html, trim whitespace from result
 			$laundry = trim(strip_tags($laundry, '<em><strong><ul><ol><li>'));
 
-			//return
-			return $laundry;
+			//limit output to CHAR_LIMIT
+			$laundry = substr($laundry, 0, FormProcessor::CHAR_LIMIT);
 		}
-	}
 
-	//transforms arrays into strings
-	private function implodeArrays(&$dirty){
-		
-		//TODO: This can only go one level deep
-		foreach($dirty as $index => $x){
-			if(is_array($x)){
-				$dirty[$index] = implode(', ',$x);
-			}
-		}
+		//return
+		return $laundry;
 	}
 }
 ?>

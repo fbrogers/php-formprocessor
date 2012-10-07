@@ -11,6 +11,15 @@ A class that aides in the emailing of HTML form post data.
 
 ##Changelog
 
+2012-10-06 Jordan Rogers <jr@ucf.edu>
+
+	* remove SQLInsert for scope creep cleaning
+	* fixed array-to-string conversion for to, cc, and bcc fields in ::send
+	* removed non-disposables check from oxyClean, optimized return structure
+	* removed ::shout, incorporated functionality into oxyClean
+	* added oxyClean to the constructor - html now stripped by default
+	* general cleanup
+
 2012-10-02 Jordan Rogers <jr@ucf.edu>
 
 	* removed some unnecessary methods (blankCheck, others)
