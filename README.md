@@ -10,6 +10,10 @@ A class that aides in the emailing of HTML form post data.
 
 ##Changelog
 
+2012-10-12
+
+	* Fixed a bug in calling DEV_EMAIL constant
+
 2012-10-06 Jordan Rogers <jr@ucf.edu>
 
 	* remove SQLInsert for scope creep cleaning

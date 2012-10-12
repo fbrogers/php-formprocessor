@@ -95,7 +95,7 @@ class FormProcessor{
 	public function send($redirect = false){
 
 		//assign development team email to bcc
-		$this->bcc[] = DEV_EMAIL;
+		$this->bcc[] = $this::DEV_EMAIL;
 
 		//check for required fields
 		if(empty($this->to)){
