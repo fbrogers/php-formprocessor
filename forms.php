@@ -1,41 +1,48 @@
 <?php
-
 class FormProcessor{
 
-	//user-definable properties
-	public $from;
-	public $to = array();
-	public $cc = array();
-	public $bcc = array();
-	public $subject;
-	public $breaks = array();
-	public $html;
-	public $conn;
+	//email properties
+	private $from;
+	private $to;
+	private $cc;
+	private $bcc;
+	private $subject;
 
-	//internal, private properties
+	//formatting properties
+	private $breaks = array();
+	private $html;
+	
+	//data properties
 	private $data;
-	private $hash;
 	private $attachments = array();
-	private $styles;
+
+	//internal class properties
+	private $hash;
 	private $body;
 	private $body_append;
 	private $body_top;
 
-	//constant settings
-	const CHAR_LIMIT = 3000;
-	const DEV_EMAIL = 'sdesitdev@ucf.edu';
+	//config properties
+	private $limit;
+	private $dev_email;
+	private $default_file_types;
+	private $install_dir;
+	private $styles;
 
 	//constructor
 	public function __construct(){
 
-		//if the submit button is set, remove it
-		if(isset($_POST['form_submit'])){
-			unset($_POST['form_submit']);
-		}
+		//open config file and set properties
+		$config = parse_ini_file('config.ini');
+		$this->limit = $config['CHAR_LIMIT'];
+		$this->dev_email = $config['DEV_EMAIL'];
+		$this->default_file_types = $config['ALLOWED_FILE_TYPES'];
+		$this->install_dir = $config['INSTALL_DIR'];
+		$this->styles = file_get_contents($this->install_dir.$config['EMAIL_STYLING']);
 
 		//assign default values
 		$this->data = $_POST;
-		$this->from = 'sdesitdev@ucf.edu';
+		$this->from = $this->dev_email;
 		$this->subject = 'Form Submission';
 		$this->html = true;
 
@@ -43,40 +50,6 @@ class FormProcessor{
 		if(empty($this->data)){
 			throw new Exception("Cannot submit a blank form.", 1);			
 		}
-
-		//style for HTML e-mails
-		$this->styles =
-		'<style type="text/css">
-			table{
-				margin: 0px;
-				border-spacing: 0px 2px 2px 2px;
-			}
-			tr{
-				vertical-align: top;
-			}
-			th{
-				background: #eee;
-				font-family: Arial, sans-serif;
-				font-size: 0.75em;
-				color: #333;
-				text-align: left;
-				padding: 4px 10px;
-				border-bottom: 1px solid #ddd;
-			}
-			td{
-				background: #fafafa;
-				font-family: Arial, sans-serif;
-				font-size: 0.75em;
-				color: #444;
-				padding: 4px 10px;
-				border-bottom: 1px solid #ddd;
-			}
-			td.blank{
-				background: #fff;
-				padding: 0px;
-				border-bottom: 0px;
-			}
-		</style>';
 
 		//check for email headers in values
 		$this->checkHeader($this->data);
@@ -88,14 +61,18 @@ class FormProcessor{
 		$this->data = $this->postClean($this->data);
 		
 		//strip html, trim values, and truncate to CHAR_LIMIT
-		$this->oxyClean($this->data);
+		$this->oxyClean($this->data, $this->limit);
 	}
+
+	/*-------------------------------------------------------------------------------------------------------------------*/
+	/*--- EMAIL SENDER METHOD -------------------------------------------------------------------------------------------*/
+	/*-------------------------------------------------------------------------------------------------------------------*/
 
 	//constructs and sends an email
 	public function send($redirect = false){
 
 		//assign development team email to bcc
-		$this->bcc[] = $this::DEV_EMAIL;
+		$this->bcc .= $this->bcc == NULL ? $this->dev_email : ','.$this->dev_email;
 
 		//check for required fields
 		if(empty($this->to)){
@@ -104,11 +81,6 @@ class FormProcessor{
 		if($this->from == NULL){
 			throw new Exception('"From:" email recipient not set.', 1);			
 		}
-
-		//converting all email headers to strings
-		$to = implode(',', $this->to);
-		$cc = implode(',', $this->cc);
-		$bcc = implode(',', $this->bcc);
 
 		//add generic headers
 		$headers = NULL;
@@ -130,7 +102,6 @@ class FormProcessor{
 
 		//attachment check and construction
 		if(empty($this->attachments)){
-
 			//set the mail type
 			$headers .= "Content-type: text/{$mailtype}; charset=UTF-8\r\n";
 
@@ -171,14 +142,14 @@ class FormProcessor{
 			$message = $temp_messaage;
 		}
 
-		//add cc header
-		if($cc != NULL){
-			$headers .= "Cc: {$cc}\r\n";
+		//add cc header if set
+		if($this->cc != NULL){
+			$headers .= "Cc: {$this->cc}\r\n";
 		}
 
-		//add bcc header
-		if($bcc != NULL){
-			$headers .= "Bcc: {$bcc}\r\n";
+		//add bcc header if set
+		if($this->bcc != NULL){
+			$headers .= "Bcc: {$this->bcc}\r\n";
 		}
 
 		//set the message according to the body
@@ -201,18 +172,232 @@ class FormProcessor{
 		}
 
 		//mail send
-		mail($to, $this->subject, $message, $headers);
+		mail($this->to, $this->subject, $message, $headers);
 
 		//redirect to the indicated page if set
 		if($redirect){
 			header("Location: {$redirect}");
 		}
+	}	
+
+	/*-------------------------------------------------------------------------------------------------------------------*/
+	/*--- SITE DATA INPUT METHODS (MUTATORS / SETTERS) ------------------------------------------------------------------*/
+	/*-------------------------------------------------------------------------------------------------------------------*/
+
+	//setter for FROM email field
+	public function from($email){
+
+		//check type
+		if(!is_string($email)){
+			throw new Exception("FROM field must be passed as a string.", 1);
+		}
+
+		//regex for email address
+		if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+			throw new Exception("FROM field must be a valid email address.", 1);
+		}
+
+		//set property
+		$this->from = $email;
 	}
 
-	//TODO: Disable/Enable DevMode
+	//setter for TO email field
+	public function to($email){
+
+		//check type
+		if(!is_array($email) and !is_string($email)){
+			throw new Exception("TO field must be passed as a string or an array.", 1);
+		}
+
+		//type fracture
+		if(is_array($email)){
+
+			//check for empty array
+			if(empty($email)){
+				throw new Exception("TO field must not be blank.", 1);
+			}
+
+			//check each address
+			foreach($email as $address){
+
+				//regex for email address
+				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
+					throw new Exception("All TO fields must be valid email addresses.", 1);
+				}
+			}
+
+			//convert array to string
+			$input = implode(',', $email);
+
+		//string
+		} else {
+
+			//check for null string
+			if($email == NULL){
+				throw new Exception("TO field must not be blank.", 1);
+			}
+
+			//regex for email address
+			if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+				throw new Exception("TO field must be a valid email address.", 1);
+			}
+
+			//set to internal variable
+			$input = $email;
+		}
+
+		//set property
+		$this->to = $input;
+	}
+
+	//setter for CC email field
+	public function cc($email){
+
+		//check type
+		if(!is_array($email) and !is_string($email)){
+			throw new Exception("CC field must be passed as a string or an array.", 1);
+		}
+
+		//type fracture
+		if(is_array($email)){
+
+			//check for empty array
+			if(empty($email)){
+				throw new Exception("CC field must not be empty.", 1);
+			}
+
+			//check each address
+			foreach($email as $address){
+
+				//regex for email address
+				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
+					throw new Exception("All CC fields must be valid email addresses.", 1);
+				}
+			}
+
+			//convert array to string
+			$input = implode(',', $email);
+
+		//string
+		} else {
+
+			//check for null string
+			if($email == NULL){
+				throw new Exception("CC field must not be blank.", 1);
+			}
+
+			//regex for email address
+			if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+				throw new Exception("CC field must be a valid email address.", 1);
+			}
+
+			//set to internal variable
+			$input = $email;
+		}
+
+		//set property
+		$this->cc = $input;
+	}
+
+	//setter for BCC email field
+	public function bcc($email){
+
+		//check type
+		if(!is_array($email) and !is_string($email)){
+			throw new Exception("BCC field must be passed as a string or an array.", 1);
+		}
+
+		//type fracture
+		if(is_array($email)){
+
+			//check for empty array
+			if(empty($email)){
+				throw new Exception("BCC field must not be empty.", 1);
+			}
+
+			//check each address
+			foreach($email as $address){
+
+				//regex for email address
+				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
+					throw new Exception("All BCC fields must be valid email addresses.", 1);
+				}
+			}
+
+			//convert array to string
+			$input = implode(',', $email);
+
+		//string
+		} else {
+
+			//check for null string
+			if($email == NULL){
+				throw new Exception("BCC field must not be blank.", 1);
+			}
+
+			//regex for email address
+			if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+				throw new Exception("BCC field must be a valid email address.", 1);
+			}
+
+			//set to internal variable
+			$input = $email;
+		}
+
+		//set property
+		$this->bcc = $input;
+	}
+
+	//setter for SUBJECT email field
+	public function subject($input){
+
+		//type check
+		if(!is_string($input) or $input == NULL){
+			throw new Exception("SUBJECT field must be a non-empty string.", 1);
+		}
+
+		//set property
+		$this->subject = trim(strip_tags($input));
+	}
+
+	//setter for the visual breaks in the email code
+	public function breaks($input){
+
+		//type check
+		if(!is_array($input) or empty($input)){
+			throw new Exception("BREAKS field must be passed as an array.", 1);
+		}
+
+		//check each field
+		foreach($input as $field){
+			if(!isset($this->data[$field])){
+				throw new Exception("{$field} does not exist in the data object, and cannot be a break.", 1);
+			}
+		}
+
+		//set property
+		$this->breaks = $input;
+	}
+
+	//setter for html email bit field
+	public function html($input){
+
+		//type check
+		if(!is_bool($input)){
+			throw new Exception("HTML input must be a boolean value.", 1);			
+		}
+
+		//set property
+		$this->html = $input;
+	}
 
 	//adds an attachment
-	public function attach($file, $required = true, $types = 'doc|docx|gif|jpg|pdf|png|rtf|txt|xls|xlsx', $size = null){
+	public function attach($file, $required = true, $types = null, $size = null){
+
+		//check allowed types
+		if($types == NULL){
+			$types = $this->default_file_types;
+		}
 
 		//file upload check
 		if($_FILES[$file]['error'] > 0){
@@ -224,13 +409,8 @@ class FormProcessor{
 		}
 
 		//set the max file size to the PHP upload limit, if no size is provided
-		if(is_null($size)){
+		if($size == NULL){
 			$size = str_replace('M', '', ini_get("upload_max_filesize"));
-		}
-
-		//check for any file upload errors
-		if($_FILES[$file]['error'] > 0){
-			throw new Exception("Error: " . $file["error"]);
 		}
 
 		//file types check
@@ -238,16 +418,21 @@ class FormProcessor{
 			throw new Exception("Error: Uploaded file type is not allowed.");
 		}
 
-		//file size check
-		if(($_FILES[$file]["size"]) > ($size * 1024 * 1024)){
+		//file size check (converts bytes to megabytes)
+		if($_FILES[$file]["size"] > ($size * 1048576)){
 			throw new Exception("File too large. It exceeds the file size limit of {$size}M.");
 		}
 
 		//attachment piece hash
 		$hash = md5(date('r', time()).$_FILES[$file]["name"]);
 
+		//retrieve file data
+		if(!($data = file_get_contents($_FILES[$file]['tmp_name']))){
+			throw new Exception("Unable to retrieve attachment file data.", 1);			
+		}
+
 		//move file stream
-		$this->attachments[$hash]['blob'] = file_get_contents($_FILES[$file]['tmp_name']);
+		$this->attachments[$hash]['blob'] = $data;
 		$this->attachments[$hash]['filename'] = strtolower($_FILES[$file]['name']);
 		$this->attachments[$hash]['filetype'] = $_FILES[$file]["type"];
 	}
@@ -265,13 +450,13 @@ class FormProcessor{
 	}
 
 	//add submission date to the body of the email
-	public function submitDate($position = 'top'){
+	public function date_submitted($top = false){
 
 		//create a datestamp array
 		$date = array('date_submitted' => date(DateTime::COOKIE));
 
 		//insert into data array
-		$this->data = ($position == 'top') ? $date+$this->data : $this->data+$data;
+		$this->data = $top ? $date+$this->data : $this->data+$data;
 	}
 
 	//set a custom email body
@@ -287,21 +472,34 @@ class FormProcessor{
 		$this->body_top = $top;
 	}
 
+	/*-------------------------------------------------------------------------------------------------------------------*/
+	/*--- PRIVATE METHODS -----------------------------------------------------------------------------------------------*/
+	/*-------------------------------------------------------------------------------------------------------------------*/
+
 	//converts array elements into a usable text string
 	private function array2text($array, $output = NULL, $prefix = NULL){
-		foreach($array as $i => $x){
-			if(is_string($i) && in_array($i, $this->breaks) || is_array($x))
-				$output .= "\n";
 
-			if(is_array($x)){ //recursion
+		//loop through data array
+		foreach($array as $i => $x){
+
+			//add an extra line break if certain conditions are met
+			if(is_string($i) && in_array($i, $this->breaks) || is_array($x)){
+				$output .= "\n";
+			}
+
+			//recursion
+			if(is_array($x)){ 
 				$output .= $prefix.strtoupper(str_replace('_',' ',$i))."\n";
 				$output .= $this->array2text($x, '', $prefix."\t");
-			}
-			else { //no recursion
+
+			//no recursion
+			} else { 
 				$output .= is_string($i) ? $prefix.ucwords(str_replace('_',' ',$i)).': ' : $prefix;
 				$output .= $x."\n";
 			}
 		}
+
+		//return the rendered output
 		return $output;
 	}
 
@@ -348,18 +546,21 @@ class FormProcessor{
 		//loop through array
 		foreach($array as $x){
 
-			//check field for an email header
-			if(!is_array($x)){
-				if(preg_match("/(%0A|%0D|\n+|\r+)(content-type:|to:|cc:|bcc:)/i",$x)){
-					throw new Exception("Email headers are not allowed, sorry!");
-				}
+			//array check
+			if(is_array($x)){
 
-			//recursion for arrays
-			} else {
+				//recursion
 				return $this->checkHeader($x);
+			} 
+
+			//check field for an email header
+			if(preg_match("/(%0A|%0D|\n+|\r+)(content-type:|to:|cc:|bcc:)/i",$x)){
+				throw new Exception("Email headers are not allowed, sorry!");
 			}
 		}
-		return false;
+
+		//return a bit flag
+		return true;
 	}
 
 	//checks for valid http referer from the same tld
@@ -376,6 +577,10 @@ class FormProcessor{
 		}
 	}
 
+	/*-------------------------------------------------------------------------------------------------------------------*/
+	/*--- STATIC METHODS ------------------------------------------------------------------------------------------------*/
+	/*-------------------------------------------------------------------------------------------------------------------*/
+	
 	//removes all blank fields
 	public static function postClean($array){
 
@@ -404,16 +609,16 @@ class FormProcessor{
 		//return the array
 		return $array;
 	}
-	
+
 	//cleans an array of html, non-displayables, and white space
-	public static function oxyClean(&$laundry){
+	public static function oxyClean(&$laundry, $limit = false){
 
 		//type check
 		if(is_array($laundry)){
 
 			//recursion
 			foreach($laundry as $spot => $dirt){
-				$laundry[$spot] = FormProcessor::oxyClean($dirt);
+				$laundry[$spot] = FormProcessor::oxyClean($dirt, $limit);
 			}
 
 		} else {
@@ -431,8 +636,8 @@ class FormProcessor{
 			//strip non-allowed html, trim whitespace from result
 			$laundry = trim(strip_tags($laundry, '<em><strong><ul><ol><li>'));
 
-			//limit output to CHAR_LIMIT
-			$laundry = substr($laundry, 0, FormProcessor::CHAR_LIMIT);
+			//limit output to CHAR_LIMIT if limit is set
+			$laundry = $limit ? substr($laundry, 0, $limit) : $laundry;
 		}
 
 		//return

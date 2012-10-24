@@ -10,6 +10,14 @@ A class that aides in the emailing of HTML form post data.
 
 ##Changelog
 
+2012-10-24
+
+	* Added config.ini to hold all environment-specific settings
+	* Made all internal properties private
+	* Added examples folder with tutorial/example files
+	* Added external CSS file for email styling
+	* 
+
 2012-10-12
 
 	* Fixed a bug in calling DEV_EMAIL constant

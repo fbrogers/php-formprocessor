@@ -1,0 +1,31 @@
+<style type="text/css">
+	table{
+		margin: 0px;
+		border-spacing: 0px 2px 2px 2px;
+	}
+	tr{
+		vertical-align: top;
+	}
+	th{
+		background: #eee;
+		font-family: Arial, sans-serif;
+		font-size: 0.75em;
+		color: #333;
+		text-align: left;
+		padding: 4px 10px;
+		border-bottom: 1px solid #ddd;
+	}
+	td{
+		background: #fafafa;
+		font-family: Arial, sans-serif;
+		font-size: 0.75em;
+		color: #444;
+		padding: 4px 10px;
+		border-bottom: 1px solid #ddd;
+	}
+	td.blank{
+		background: #fff;
+		padding: 0px;
+		border-bottom: 0px;
+	}
+</style>
