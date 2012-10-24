@@ -100,6 +100,29 @@ class FormProcessor{
 		//set the mail type to html or plain
 		$mailtype = $this->html ? 'html' : 'plain';
 
+		//set the message according to the body
+		if($this->body != NULL){
+
+			//contents of message body
+			if($this->body_append){
+
+				//position boolean
+				if($this->body_top){
+					$message = $this->html 
+						? $this->body.'<br />'.$message 
+						: $this->body."\n\n".$message;
+				} else {
+					$message .= $this->html 
+						? '<br />'.$this->body
+						: "\n\n".$this->body;
+				}
+
+			//replace the body
+			} else {
+				$message = $this->body;
+			}
+		}
+
 		//attachment check and construction
 		if(empty($this->attachments)){
 			//set the mail type
@@ -150,25 +173,6 @@ class FormProcessor{
 		//add bcc header if set
 		if($this->bcc != NULL){
 			$headers .= "Bcc: {$this->bcc}\r\n";
-		}
-
-		//set the message according to the body
-		if($this->body != NULL){
-
-			//contents of message body
-			if($this->body_append){
-				if($this->body_top){
-					$message = $this->html 
-						? $this->body.'<br />'.$message 
-						: $this->body."\n\n".$message;
-				}else{
-					$message .= $this->html 
-						? '<br />'.$this->body
-						: "\n\n".$this->body;
-				}
-			}else{
-				$message = $this->body;
-			}
 		}
 
 		//mail send
@@ -456,7 +460,9 @@ class FormProcessor{
 		$date = array('date_submitted' => date(DateTime::COOKIE));
 
 		//insert into data array
-		$this->data = $top ? $date+$this->data : $this->data+$data;
+		$this->data = $top 
+			? array_merge($date, $this->data)
+			: array_merge($this->data, $date);
 	}
 
 	//set a custom email body
