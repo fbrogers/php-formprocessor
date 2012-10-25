@@ -24,6 +24,7 @@ class FormProcessor{
 
 	//config properties
 	private $limit;
+	private $dev_mode;
 	private $dev_email;
 	private $default_file_types;
 	private $install_dir;
@@ -32,12 +33,17 @@ class FormProcessor{
 	//constructor
 	public function __construct(){
 
-		//open config file and set properties
+		//open config file
 		$config = parse_ini_file('config.ini');
+
+		//set config file options to properties
 		$this->limit = $config['CHAR_LIMIT'];
+		$this->dev_mode = (bool)$config['DEV_MODE'];
 		$this->dev_email = $config['DEV_EMAIL'];
 		$this->default_file_types = $config['ALLOWED_FILE_TYPES'];
 		$this->install_dir = $config['INSTALL_DIR'];
+
+		//import styles
 		$this->styles = file_get_contents($this->install_dir.$config['EMAIL_STYLING']);
 
 		//assign default values
@@ -72,7 +78,9 @@ class FormProcessor{
 	public function send($redirect = false){
 
 		//assign development team email to bcc
-		$this->bcc .= $this->bcc == NULL ? $this->dev_email : ','.$this->dev_email;
+		if($this->dev_mode){
+			$this->bcc .= $this->bcc == NULL ? $this->dev_email : ','.$this->dev_email;
+		}
 
 		//check for required fields
 		if(empty($this->to)){
@@ -476,6 +484,18 @@ class FormProcessor{
 
 		//set the position of the body
 		$this->body_top = $top;
+	}
+
+	//set dev mode locally
+	public function dev_mode($input){
+
+		//type check
+		if(!is_bool($input)){
+			throw new Exception("Dev mode input must be a boolean value.", 1);			
+		}
+
+		//set property
+		$this->dev_mode = $input;
 	}
 
 	/*-------------------------------------------------------------------------------------------------------------------*/

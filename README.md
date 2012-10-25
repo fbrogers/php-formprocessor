@@ -10,6 +10,11 @@ A class that aides in the emailing of HTML form post data.
 
 ##Changelog
 
+2012-10-25
+	
+	* Added dev_mode (global setting in config.ini and local setting via ::dev_mode())
+	* Fleshed out example with descriptions, constraints, and examples
+
 2012-10-24
 
 	* Added config.ini to hold all environment-specific settings

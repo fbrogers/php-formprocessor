@@ -229,6 +229,24 @@
 
 
 		/* ----------------------------------------------------------------------------
+			EMAIL: TYPE OF EMAIL (HTML or PLAIN TEXT)
+		------------------------------------------------------------------------------- 
+		description:
+		this method sets $this->dev_mode locally (as dev_mode is set globally via the
+		config.ini file). This is useful if your global setting is TRUE but you wish to
+		exclude certain forms, or if your global setting is FALSE but you wish to see
+		a new form in action for a few days/weeks/months.
+
+		default: config.ini setting for DEV_MODE
+
+		example usage:
+		$f->dev_mode(true);
+		$f->dev_mode(false);
+		---------------------------------------------------------------------------- */
+		$f->dev_mode(true);
+
+
+		/* ----------------------------------------------------------------------------
 			EMAIL: SEND
 		------------------------------------------------------------------------------- 
 		description:
