@@ -199,6 +199,9 @@ class FormProcessor{
 	//setter for FROM email field
 	public function from($email){
 
+		//trim the contents
+		$email = trim($email);
+
 		//check type
 		if(!is_string($email)){
 			throw new Exception("FROM field must be passed as a string.", 1);
@@ -230,7 +233,10 @@ class FormProcessor{
 			}
 
 			//check each address
-			foreach($email as $address){
+			foreach($email as &$address){
+
+				//trim the contents
+				$address = trim($address);
 
 				//regex for email address
 				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
@@ -243,6 +249,9 @@ class FormProcessor{
 
 		//string
 		} else {
+
+			//trim the contents
+			$email = trim($email);
 
 			//check for null string
 			if($email == NULL){
@@ -279,7 +288,10 @@ class FormProcessor{
 			}
 
 			//check each address
-			foreach($email as $address){
+			foreach($email as &$address){
+
+				//trim the contents
+				$address = trim($address);		
 
 				//regex for email address
 				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
@@ -292,6 +304,9 @@ class FormProcessor{
 
 		//string
 		} else {
+
+			//trim the contents
+			$email = trim($email);		
 
 			//check for null string
 			if($email == NULL){
@@ -328,7 +343,10 @@ class FormProcessor{
 			}
 
 			//check each address
-			foreach($email as $address){
+			foreach($email as &$address){
+
+				//trim the contents
+				$address = trim($address);	
 
 				//regex for email address
 				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
@@ -341,6 +359,9 @@ class FormProcessor{
 
 		//string
 		} else {
+
+			//trim the contents
+			$email = trim($email);	
 
 			//check for null string
 			if($email == NULL){
