@@ -10,6 +10,12 @@ A class that aides in the emailing of HTML form post data.
 
 ##Changelog
 
+2013-04-01
+
+	* Implemented trimming before exception checking
+	* Consolidated trimming and verification of regex compare to methods
+	* Consolidated methods are static for testing purposes
+
 2012-10-25
 	
 	* Added dev_mode (global setting in config.ini and local setting via ::dev_mode())
