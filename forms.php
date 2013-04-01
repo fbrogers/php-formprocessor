@@ -70,9 +70,9 @@ class FormProcessor{
 		$this->oxyClean($this->data, $this->limit);
 	}
 
-	/*-------------------------------------------------------------------------------------------------------------------*/
-	/*--- EMAIL SENDER METHOD -------------------------------------------------------------------------------------------*/
-	/*-------------------------------------------------------------------------------------------------------------------*/
+	/*---------------------------------------------------------------------------------*/
+	/*--- EMAIL SENDER METHOD ---------------------------------------------------------*/
+	/*---------------------------------------------------------------------------------*/
 
 	//constructs and sends an email
 	public function send($redirect = false){
@@ -192,25 +192,21 @@ class FormProcessor{
 		}
 	}	
 
-	/*-------------------------------------------------------------------------------------------------------------------*/
-	/*--- SITE DATA INPUT METHODS (MUTATORS / SETTERS) ------------------------------------------------------------------*/
-	/*-------------------------------------------------------------------------------------------------------------------*/
+	/*---------------------------------------------------------------------------------*/
+	/*--- SITE DATA INPUT METHODS (MUTATORS / SETTERS) --------------------------------*/
+	/*---------------------------------------------------------------------------------*/
 
 	//setter for FROM email field
 	public function from($email){
-
-		//trim the contents
-		$email = trim($email);
 
 		//check type
 		if(!is_string($email)){
 			throw new Exception("FROM field must be passed as a string.", 1);
 		}
 
-		//regex for email address
-		if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-			throw new Exception("FROM field must be a valid email address.", 1);
-		}
+		//check email validity
+		$email = $this->trimEmails($email);
+		$this->verifyEmails($email);
 
 		//set property
 		$this->from = $email;
@@ -224,48 +220,16 @@ class FormProcessor{
 			throw new Exception("TO field must be passed as a string or an array.", 1);
 		}
 
-		//type fracture
-		if(is_array($email)){
-
-			//check for empty array
-			if(empty($email)){
-				throw new Exception("TO field must not be blank.", 1);
-			}
-
-			//check each address
-			foreach($email as &$address){
-
-				//trim the contents
-				$address = trim($address);
-
-				//regex for email address
-				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
-					throw new Exception("All TO fields must be valid email addresses.", 1);
-				}
-			}
-
-			//convert array to string
-			$input = implode(',', $email);
-
-		//string
-		} else {
-
-			//trim the contents
-			$email = trim($email);
-
-			//check for null string
-			if($email == NULL){
-				throw new Exception("TO field must not be blank.", 1);
-			}
-
-			//regex for email address
-			if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-				throw new Exception("TO field must be a valid email address.", 1);
-			}
-
-			//set to internal variable
-			$input = $email;
+		if($email == NULL || empty($email)){
+			throw new Exception("TO field must not be empty.", 1);
 		}
+
+		//check email validity
+		$email = $this->trimEmails($email);
+		$this->verifyEmails($email);	
+
+		if(is_array($email)) $input = implode(',', $email);
+		else $input = $email;
 
 		//set property
 		$this->to = $input;
@@ -279,48 +243,16 @@ class FormProcessor{
 			throw new Exception("CC field must be passed as a string or an array.", 1);
 		}
 
-		//type fracture
-		if(is_array($email)){
-
-			//check for empty array
-			if(empty($email)){
-				throw new Exception("CC field must not be empty.", 1);
-			}
-
-			//check each address
-			foreach($email as &$address){
-
-				//trim the contents
-				$address = trim($address);		
-
-				//regex for email address
-				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
-					throw new Exception("All CC fields must be valid email addresses.", 1);
-				}
-			}
-
-			//convert array to string
-			$input = implode(',', $email);
-
-		//string
-		} else {
-
-			//trim the contents
-			$email = trim($email);		
-
-			//check for null string
-			if($email == NULL){
-				throw new Exception("CC field must not be blank.", 1);
-			}
-
-			//regex for email address
-			if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-				throw new Exception("CC field must be a valid email address.", 1);
-			}
-
-			//set to internal variable
-			$input = $email;
+		if($email == NULL || empty($email)){
+			throw new Exception("CC field must not be empty.", 1);
 		}
+
+		//check email validity
+		$email = $this->trimEmails($email);
+		$this->verifyEmails($email);	
+
+		if(is_array($email)) $input = implode(',', $email);
+		else $input = $email;
 
 		//set property
 		$this->cc = $input;
@@ -334,48 +266,16 @@ class FormProcessor{
 			throw new Exception("BCC field must be passed as a string or an array.", 1);
 		}
 
-		//type fracture
-		if(is_array($email)){
-
-			//check for empty array
-			if(empty($email)){
-				throw new Exception("BCC field must not be empty.", 1);
-			}
-
-			//check each address
-			foreach($email as &$address){
-
-				//trim the contents
-				$address = trim($address);	
-
-				//regex for email address
-				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
-					throw new Exception("All BCC fields must be valid email addresses.", 1);
-				}
-			}
-
-			//convert array to string
-			$input = implode(',', $email);
-
-		//string
-		} else {
-
-			//trim the contents
-			$email = trim($email);	
-
-			//check for null string
-			if($email == NULL){
-				throw new Exception("BCC field must not be blank.", 1);
-			}
-
-			//regex for email address
-			if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-				throw new Exception("BCC field must be a valid email address.", 1);
-			}
-
-			//set to internal variable
-			$input = $email;
+		if($email == NULL || empty($email)){
+			throw new Exception("BCC field must not be empty.", 1);
 		}
+
+		//check email validity
+		$email = $this->trimEmails($email);
+		$this->verifyEmails($email);	
+
+		if(is_array($email)) $input = implode(',', $email);
+		else $input = $email;
 
 		//set property
 		$this->bcc = $input;
@@ -519,9 +419,9 @@ class FormProcessor{
 		$this->dev_mode = $input;
 	}
 
-	/*-------------------------------------------------------------------------------------------------------------------*/
-	/*--- PRIVATE METHODS -----------------------------------------------------------------------------------------------*/
-	/*-------------------------------------------------------------------------------------------------------------------*/
+	/*---------------------------------------------------------------------------------*/
+	/*--- PRIVATE METHODS -------------------------------------------------------------*/
+	/*---------------------------------------------------------------------------------*/
 
 	//converts array elements into a usable text string
 	private function array2text($array, $output = NULL, $prefix = NULL){
@@ -624,17 +524,15 @@ class FormProcessor{
 		}
 	}
 
-	/*-------------------------------------------------------------------------------------------------------------------*/
-	/*--- STATIC METHODS ------------------------------------------------------------------------------------------------*/
-	/*-------------------------------------------------------------------------------------------------------------------*/
+	/*---------------------------------------------------------------------------------*/
+	/*--- STATIC METHODS --------------------------------------------------------------*/
+	/*---------------------------------------------------------------------------------*/
 	
 	//removes all blank fields
 	public static function postClean($array){
 
-		//loop through given array
 		foreach($array as $index => $x){
 
-			//check for nested arrays
 			if(is_array($x)){
 
 				//recursive call
@@ -645,7 +543,6 @@ class FormProcessor{
 					unset($array[$index]);
 				}
 
-			//check for null values
 			}elseif(trim($x) == NULL) {
 
 				//remove the elemet from the array
@@ -653,7 +550,6 @@ class FormProcessor{
 			}
 		}
 
-		//return the array
 		return $array;
 	}
 
@@ -687,8 +583,47 @@ class FormProcessor{
 			$laundry = $limit ? substr($laundry, 0, $limit) : $laundry;
 		}
 
-		//return
 		return $laundry;
+	}
+
+	public static function trimEmails($emails){
+
+		if(is_array($emails)){
+
+			foreach($emails as &$address){
+				$address = trim($address);
+			}
+
+		} else {
+			$emails = trim($emails);
+		}
+
+		return $emails;
+	}
+
+	public static function verifyEmails($emails){
+		if(is_array($emails)){
+
+			if(empty($emails)){
+				throw new Exception("No email addresses provided.", 1);
+			}
+
+			foreach($emails as $address){
+				if(!filter_var($address, FILTER_VALIDATE_EMAIL)){
+					throw new Exception("Email address not valid: {$address}.", 1);
+				}
+			}
+
+		} else {
+
+			if($emails == NULL){
+				throw new Exception("No email address provided.", 1);
+			}
+
+			if(!filter_var($emails, FILTER_VALIDATE_EMAIL)){
+				throw new Exception("Email address not valid: {$emails}.", 1);
+			}
+		}
 	}
 }
 ?>
