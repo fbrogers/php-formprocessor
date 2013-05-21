@@ -144,11 +144,11 @@ class FormProcessor{
 			$mime_boundary = "==Multipart_Boundary_x{$hash}x";
 			
 			// headers for attachment 
-			$headers .= "Content-Type: multipart/mixed;\n" . " boundary=\"{$mime_boundary}\""; 
+			$headers .= "Content-Type: multipart/mixed;\n" . " boundary=\"{$mime_boundary}\"\r\n"; 
 			
 			//start email message with HTML/plain content
-			$temp_messaage = "This is a multi-part message in MIME format.\n\n" . "--{$mime_boundary}\n";
-			$temp_messaage .= "Content-type: text/{$mailtype}; charset=UTF-8\r\n" . "Content-Transfer-Encoding: 7bit\n\n" . $message . "\n\n";
+			$temp_message = "This is a multi-part message in MIME format.\n\n" . "--{$mime_boundary}\n";
+			$temp_message .= "Content-Type: text/{$mailtype}; charset=UTF-8\r\n" . "Content-Transfer-Encoding: 7bit\n\n" . $message . "\n\n";
 
 			//loop through all attachments in the array
 			foreach($this->attachments as $single){
@@ -157,7 +157,7 @@ class FormProcessor{
 				$attachment = chunk_split(base64_encode($single['blob'])); 
 
 				//create attachment section
-				$temp_messaage .= "--{$mime_boundary}\n" .
+				$temp_message .= "--{$mime_boundary}\n" .
 				"Content-Type: ". $single['filetype'] .";\n" .
 				" name=\"". $single['filename'] ."\"\n" .
 				"Content-Disposition: attachment;\n" .
@@ -166,11 +166,11 @@ class FormProcessor{
 				$attachment . "\n\n";
 			}
 			
-			//final booundary echo with trailing dashes to signify end
-			$temp_messaage .= "--{$mime_boundary}--\r\n";
+			//final boundary echo with trailing dashes to signify end
+			$temp_message .= "--{$mime_boundary}--\r\n";
 			
 			//save to message
-			$message = $temp_messaage;
+			$message = $temp_message;
 		}
 
 		//add cc header if set
