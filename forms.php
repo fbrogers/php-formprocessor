@@ -487,26 +487,16 @@ class FormProcessor{
 		return $output;
 	}
 
-	//checks all elements of a given array for an email header
+	//checks all elements of a given array for email header injection
 	private function checkHeader($array){
-
-		//loop through array
 		foreach($array as $x){
-
-			//array check
 			if(is_array($x)){
-
-				//recursion
 				return $this->checkHeader($x);
 			} 
-
-			//check field for an email header
 			if(preg_match("/(%0A|%0D|\n+|\r+)(content-type:|to:|cc:|bcc:)/i",$x)){
 				throw new Exception("Email headers are not allowed, sorry!");
 			}
 		}
-
-		//return a bit flag
 		return true;
 	}
 
